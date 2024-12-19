@@ -11,11 +11,17 @@
   =========================*/
 int server_setup() {
   int from_client = 0;
+  int fifo = mkfifo(WKP, 0666);
+  if(fifo == -1){
+    perror("WKP error");
+    exit(1);
+  }
+  from_client = open(WKP, O_WRONLY);
   return from_client;
 }
 
 /*=========================
-  server_handshake 
+  server_handshake
   args: int * to_client
 
   Performs the server side pipe 3 way handshake.
@@ -25,6 +31,7 @@ int server_setup() {
   =========================*/
 int server_handshake(int *to_client) {
   int from_client;
+  int banana = server_setup();
   return from_client;
 }
 
@@ -56,5 +63,3 @@ int server_connect(int from_client) {
   int to_client  = 0;
   return to_client;
 }
-
-
