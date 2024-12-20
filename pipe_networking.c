@@ -31,7 +31,9 @@ int server_setup() {
   =========================*/
 int server_handshake(int *to_client) {
   int from_client;
-  int banana = server_setup();
+  int server = server_setup();
+  to_client = &server;
+
   return from_client;
 }
 
