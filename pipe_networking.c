@@ -10,14 +10,19 @@
   returns the file descriptor for the upstream pipe.
   =========================*/
 int server_setup() {
-  int from_client = 0;
-  int fifo = mkfifo(WKP, 0666);
-  if(fifo == -1){
-    perror("WKP error");
-    exit(1);
+  if(read(WKP, sizeof(WKP))){
+    remove(WKP);
   }
-  from_client = open(WKP, O_WRONLY);
-  return from_client;
+    else{
+      int from_client = 0;
+      int fifo = mkfifo(WKP, 0666);
+      if(fifo == -1){
+        perror("WKP error");
+        exit(1);
+      }
+      from_client = open(WKP, O_WRONLY);
+      return from_client;  
+    }
 }
 
 /*=========================
@@ -33,6 +38,7 @@ int server_handshake(int *to_client) {
   int from_client;
   int server = server_setup();
   to_client = &server;
+open(WKP, O_WRONLY);
 
   return from_client;
 }
@@ -49,6 +55,7 @@ int server_handshake(int *to_client) {
   =========================*/
 int client_handshake(int *to_server) {
   int from_server;
+  pipe()
   return from_server;
 }
 
