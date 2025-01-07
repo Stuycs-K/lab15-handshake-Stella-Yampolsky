@@ -1,74 +1,83 @@
 #include "pipe_networking.h"
-//UPSTREAM = to the server / from the client
-//DOWNSTREAM = to the client / from the server
-/*=========================
-  server_setup
 
-  creates the WKP and opens it, waiting for a  connection.
-  removes the WKP once a connection has been made
-
-  returns the file descriptor for the upstream pipe.
-  =========================*/
-int server_setup() {
-  if(read(WKP, sizeof(WKP))){
-    remove(WKP);
-  }
-    else{
-      int from_client = 0;
-      int fifo = mkfifo(WKP, 0666);
-      if(fifo == -1){
-        perror("WKP error");
+int send_message(int pipe_fd, struct message *msg) {
+    if (write(pipe_fd, msg, sizeof(struct message)) == -1) {
+        perror("Error sending message");
         exit(1);
-      }
-      from_client = open(WKP, O_WRONLY);
-      return from_client;  
     }
+    return 0;
 }
 
-/*=========================
-  server_handshake
-  args: int * to_client
+int receive_message(int pipe_fd, struct message *msg) {
+    if (read(pipe_fd, msg, sizeof(struct message)) == -1) {
+        perror("Error receiving message");
+        exit(1);
+    }
+    return 0;
+}
 
-  Performs the server side pipe 3 way handshake.
-  Sets *to_client to the file descriptor to the downstream pipe (Client's private pipe).
+int server_setup() {
+    if (access(WKP, F_OK) != -1) {
+        remove(WKP);
+    }
+    if (mkfifo(WKP, 0666) == -1) {
+        perror("Error creating WKP");
+        exit(1);
+    }
+    int from_client = open(WKP, O_RDONLY);
+    if (from_client == -1) {
+        perror("Error opening WKP");
+        exit(1);
+    }
+    return from_client;
+}
 
-  returns the file descriptor for the upstream pipe (see server setup).
-  =========================*/
 int server_handshake(int *to_client) {
-  int from_client;
-  int server = server_setup();
-  to_client = &server;
-open(WKP, O_WRONLY);
+    int from_client = server_setup();
+    *to_client = open(WKP, O_WRONLY);
+    if (*to_client == -1) {
+        perror("Error opening WKP for writing");
+        exit(1);
+    }
 
-  return from_client;
+    struct message msg;
+    receive_message(from_client, &msg);
+    if (msg.type != SYN) {
+        perror("Expected SYN message");
+        exit(1);
+    }
+
+    msg.type = SYN_ACK;
+    send_message(*to_client, &msg);
+
+    receive_message(from_client, &msg);
+    if (msg.type != ACK) {
+        perror("Expected ACK message");
+        exit(1);
+    }
+
+    return from_client;
 }
 
-
-/*=========================
-  client_handshake
-  args: int * to_server
-
-  Performs the client side pipe 3 way handshake.
-  Sets *to_server to the file descriptor for the upstream pipe.
-
-  returns the file descriptor for the downstream pipe.
-  =========================*/
 int client_handshake(int *to_server) {
-  int from_server;
-  pipe()
-  return from_server;
-}
+    *to_server = open(WKP, O_WRONLY);
+    if (*to_server == -1) {
+        perror("Error opening WKP for writing");
+        exit(1);
+    }
 
+    struct message msg;
+    msg.type = SYN;
+    send_message(*to_server, &msg);
 
-/*=========================
-  server_connect
-  args: int from_client
+    receive_message(*to_server, &msg);
+    if (msg.type != SYN_ACK) {
+        perror("Expected SYN_ACK message");
+        exit(1);
+    }
 
-  handles the subserver portion of the 3 way handshake
+    msg.type = ACK;
+    send_message(*to_server, &msg);
 
-  returns the file descriptor for the downstream pipe.
-  =========================*/
-int server_connect(int from_client) {
-  int to_client  = 0;
-  return to_client;
+    return 0;
 }
